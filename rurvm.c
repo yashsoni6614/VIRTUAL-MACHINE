@@ -16,7 +16,7 @@
 // DEFINING THE MEMORY 
 uint16_t memory[MEMORY_MAX];
 enum {
-    R_RO,
+    R_R0,
     R_R1,
     R_R2,
     R_R3,
@@ -49,6 +49,15 @@ enum {
     OP_LEA, //load effective address
     OP_TRAP //execute trap
 };
+//TRAP ROUTINES
+enum {
+    TRAP_GETC  = 0x20, //for getting the character from the keyboard 
+    TRAP_OUT   = 0x21, //output a character
+    TRAP_PUTS  = 0x22, //output a word string 
+    TRAP_IN    = 0x23, //gets a character from the keyboard and echo it into the terminal
+    TRAP_PUTSP = 0x24, //output a byte string
+    TRAP_HALT  = 0x25  //halt the program 
+};
 
 //condition flags  
 enum {
@@ -76,6 +85,16 @@ void func_LEA(const uint16_t*);
 void func_ST(const uint16_t*);
 void func_STI(const uint16_t*);
 void func_STR(const uint16_t*);
+
+//TRAP SUBROUTINES
+void func_TRAP_GETC();
+void func_TRAP_OUT();
+void func_TRAP_PUTS();
+void func_TRAP_IN();
+void func_TRAP_PUTSP();
+void func_TRAP_HALT(int*);
+
+
 int main(int argc, char const *argv[])
 {   
     //basic error handling 111 of arguements is happening there
@@ -148,7 +167,28 @@ int main(int argc, char const *argv[])
                 func_STR(&instr);
                 break;
             case OP_TRAP:
-                //OP_TRAP FUNCTION
+                    reg[R_R7] = reg[R_PC];
+
+                    switch (instr & 0xFF) {
+                        case TRAP_GETC:
+                            func_TRAP_GETC();
+                            break;
+                        case TRAP_OUT:
+                            func_TRAP_OUT();
+                            break;
+                        case TRAP_PUTS:
+                            func_TRAP_PUTS();
+                            break;
+                        case TRAP_IN:
+                            func_TRAP_IN();
+                            break;
+                        case TRAP_PUTSP:
+                            func_TRAP_PUTSP();
+                            break;
+                        case TRAP_HALT:
+                            func_TRAP_HALT(&running);
+                            break;
+                    } 
                 break;
             case OP_RES: abort(); break;
             case OP_RTI: abort(); break;
@@ -313,3 +353,58 @@ void func_STR(const uint16_t* instr) {
     uint16_t offset = sign_extend(*instr & 0x3F,6);
     mem_write(reg[r1]+offset,reg[r0]);
 }
+
+//TRAP SUBROUTINES 
+
+void func_TRAP_PUTS () {
+    uint16_t* c = memory + reg[R_R0];
+    while(*c) {
+        putc((char)*c,stdout);
+        ++c;
+    }
+    //there is the need to flush entire thing into the stdout because putc stores everything into the buffer first 
+    //untill it encounters a new line or the end of the file stuff but in our case it not might be ending with this 
+    //so ultimately we are just flushing it out into the stdout regardless
+    fflush(stdout); 
+}
+
+void func_TRAP_GETC () {
+    reg[R_R0] = (uint16_t)getchar();
+    update_flags(R_R0);
+}
+
+void func_TRAP_OUT () {
+    putc((char)reg[R_R0],stdout);
+    fflush(stdout);
+}
+
+void func_TRAP_IN () {
+    printf("Enter a character: ");
+    char c = getchar();
+    putc(c,stdout);
+    fflush(stdout);
+    reg[R_R0] = (uint16_t)c;
+    update_flags(R_R0);
+}
+
+void func_TRAP_PUTSP () {
+    //instead of storing the character which requires only 8 bytes at max we are storing it into 
+    //the 16 bit space which is obviously the waste of space and in order to handle this thing 
+    //what we are doing is we are using a word space to store 2 characters instead 
+    uint16_t* c = memory + reg[R_R0];
+    while(*c) {
+        char char1 = (*c) & 0xFF;
+        putc(char1,stdout);
+        char char2 = (*c) >>8;
+        if(char2) putc(char2,stdout);
+        ++c; 
+    }
+    fflush(stdout);
+}
+
+void func_TRAP_HALT (int * running) {
+    puts("HALT");
+    fflush(stdout);
+    *running = 0;
+}
+
