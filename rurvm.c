@@ -66,11 +66,16 @@ enum {
     FL_NEG = 1<<2  //NEGATIVE
 };
 
+//Special Memory mapped Registers
+enum {
+    MR_KBSR = 0xFE00, //keyboard status
+    MR_KBDR = 0xFE02 //keyboard data
+};
 //function declarations
 
 uint16_t mem_read(uint16_t);
-uint16_t mem_write(uint16_t,uint16_t);
-uint16_t sign_extend(uint16_t , int );
+uint16_t sign_extend(uint16_t,int);
+void mem_write(uint16_t,uint16_t);
 void update_flags(uint16_t );
 void func_ADD (const uint16_t*);
 void func_LDI(const uint16_t*);
@@ -94,14 +99,57 @@ void func_TRAP_IN();
 void func_TRAP_PUTSP();
 void func_TRAP_HALT(int*);
 
+//Reading our executable file 
 
+uint16_t swap16(uint16_t);
+void read_image_file(FILE*);
+int read_image(const char*);
+
+
+
+//THESE FUNCTIONS ARE THERE FOR TO ACCESS THE KEYBOARD AND STUFF. I HAVENT IMPLEMENTED THE FUNCTIONS BELOW
+//INPUT BUFFERING FUNCTIONS 
+struct termios original_tio;
+
+void disable_input_buffering()
+{
+    tcgetattr(STDIN_FILENO, &original_tio);
+    struct termios new_tio = original_tio;
+    new_tio.c_lflag &= ~ICANON & ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+}
+
+void restore_input_buffering()
+{
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
+}
+
+uint16_t check_key()
+{
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(STDIN_FILENO, &readfds);
+
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+    return select(1, &readfds, NULL, NULL, &timeout) != 0;
+}
+
+//handle interrupt 
+void handle_interrupt(int signal)
+{
+    restore_input_buffering();
+    printf("\n");
+    exit(-2);
+}
 int main(int argc, char const *argv[])
 {   
     //basic error handling 111 of arguements is happening there
     if(argc <2 )//no machine code is given 
     {   
         printf("Usage:\n");
-        printf("rurvm [imagem_read(reg[R_PC]++e-file1] ....\n");
+        printf("rurvm [image-file1] ....\n");
         exit(2);
     }
 
@@ -112,14 +160,15 @@ int main(int argc, char const *argv[])
         }
     }
 
+    signal(SIGINT, handle_interrupt);
+    disable_input_buffering();
+
     //here some setup stuff gonna happen which we will figure out later on 
 
     reg[R_COND] = FL_ZRO; //initially load the conditional flag register with the zero flag
 
     // in LC-3 user editable programs starts from the location 0x3000 so we have to load the program counter with this memory address
-    enum { PC_START = 0x3000};
-    reg[R_PC] = PC_START;
-
+   
     //now the main execution loop will start from here 
     int running = 1;
     while(running) {
@@ -199,8 +248,26 @@ int main(int argc, char const *argv[])
     }
     //shutdown function 
     
-    
+    restore_input_buffering();
     return 0;
+}
+
+uint16_t mem_read(uint16_t address) {
+
+    if(address == MR_KBSR) {
+        if(check_key()) {
+            memory[MR_KBSR] = (1<<15);
+            memory[MR_KBDR] = getchar();
+        }
+        else {
+            memory[MR_KBSR] = 0;
+        }
+    }
+    return memory[address];
+}
+
+void mem_write(uint16_t address,uint16_t val) {
+    memory[address] = val;
 }
 
 //this function is basically used for handling the immediate numbers sign 
@@ -218,7 +285,7 @@ uint16_t sign_extend(uint16_t x,int bit_count){
 void update_flags(uint16_t r) {
 
     if(reg[r] == 0) {
-        reg[R_COND] = FL_ZRO;
+        reg[R_COND] = FL_ZRO; 
     }
     else if(reg[r]>>15) {
         reg[R_COND] = FL_NEG;
@@ -408,3 +475,31 @@ void func_TRAP_HALT (int * running) {
     *running = 0;
 }
 
+uint16_t swap16(uint16_t x) {
+    return (x << 8) | (x>>8);
+}
+
+//reading the image file 
+
+void read_image_file(FILE* file) {
+    uint16_t origin; //this gonna store the base address for the machine code to be stored
+    fread(&origin,sizeof(origin),1,file);//this is for reading the file for only first 2 bytes 
+    origin = swap16(origin);//this is basically swapping 2 bytes so that the innate big-endian of LC assembler gets to convert into the little endian as specified by modern microprocessors 
+    reg[R_PC] = origin;
+    uint16_t max_read = MEMORY_MAX - origin;
+    uint16_t* p = memory + origin;
+    size_t read = fread(p,sizeof(uint16_t),max_read,file);
+
+    while(read-->0) {
+        *p  = swap16(*p);
+        ++p;
+    }
+}
+
+int read_image(const char* image_path) {
+    FILE* file  = fopen(image_path,"rb");
+    if(!file) {return 0;}
+    read_image_file(file);
+    fclose(file);
+    return 1;
+}
