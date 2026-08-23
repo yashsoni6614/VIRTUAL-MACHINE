@@ -204,7 +204,7 @@ int main(int argc, char const *argv[])
                 func_LDR(&instr);
                 break;
             case OP_LEA:
-                func_LDE(&instr);
+                func_LEA(&instr);
                 break;
             case OP_ST:
                 func_ST(&instr);
@@ -299,7 +299,7 @@ void func_ADD(const uint16_t* instr) {
 
     uint16_t r0 = (*instr >> 9) & 0x7; //destinition register
     // operand 1 
-    uint16_t r1 = (*instr >> 9) & 0x7;
+    uint16_t r1 = (*instr >> 6) & 0x7;
     // checking the mode 
     uint16_t imm_flag = (*instr >> 5) & 0x1;
 
@@ -334,7 +334,7 @@ void func_AND(const uint16_t* instr) {
     uint16_t imm_flag = (*instr>>5) & 0x1; //mode selection
 
     if(imm_flag) {
-        uint16_t imm5 = sign_extend(*instr & 0x15,5);
+        uint16_t imm5 = sign_extend(*instr & 0x1F,5);
         reg[r0] = reg[r1] & imm5;
     }
     else {
@@ -347,7 +347,7 @@ void func_AND(const uint16_t* instr) {
 void func_NOT(const uint16_t* instr) {
     uint16_t r0 =(*instr >>9) & 0x7;
     uint16_t r1 = (*instr >>6) & 0x7;
-    reg[r0] = -reg[r1];
+    reg[r0] = ~reg[r1];
     update_flags(r0);
 }
 
