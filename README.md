@@ -90,7 +90,7 @@ The LC-3 assembly source for the three demo programs is in `asm_files(demo)/`, s
 
 **Rogue**
 <br>
-*<img width="461" height="361" alt="image" src="https://github.com/user-attachments/assets/7d396e58-293e-4ed8-aa94-a11bb77977b9" />
+*<img width="726" height="620" alt="image" src="https://github.com/user-attachments/assets/24d891d3-981a-4347-a5a3-8dc40a49b715" />
 *
 
 ## Writing your own programs
