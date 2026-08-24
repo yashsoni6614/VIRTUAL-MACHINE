@@ -238,7 +238,7 @@ void func_AND(const uint16_t* instr) {
     }
     else {
         uint16_t r2 = (*instr & 0x7);
-        reg[r0] = r1 & r2;
+        reg[r0] = reg[r1] & reg[r2];
     }
     update_flags(r0);
 }
