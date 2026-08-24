@@ -1,78 +1,16 @@
 //here we are gonna implement a LC-3 architecture on our own
 //LC-3 architecture of computer has the 16KB of addressable values and each location can store 16 bits of the data 
 //this achitecture  of the computer has 8 general purpose registers and one program counter and one condition flag register
-#include <stdio.h>
-#include <stdint.h>
-#include <signal.h>
-/* unix only */
-#include <stdlib.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <sys/termios.h>
-#include <sys/mman.h>
-#define MEMORY_MAX (1 << 16)
-// DEFINING THE MEMORY 
+#include"headers.h"
+
+//OUR MAIN MEMORY FOR THIS ARCHITECTURE
 uint16_t memory[MEMORY_MAX];
-enum {
-    R_R0,
-    R_R1,
-    R_R2,
-    R_R3,
-    R_R4,
-    R_R5,
-    R_R6,
-    R_R7,
-    R_PC,
-    R_COND,
-    R_COUNT,
-};
+
 // unsigned 16 bit REGISTERS SET 
 uint16_t reg[R_COUNT];
-//COMMAND SET FOR OUR VM
-enum {
-    OP_BR, // branch
-    OP_ADD,//add
-    OP_LD, //load
-    OP_ST, //store
-    OP_JSR,//jump register
-    OP_AND,//bitwise and
-    OP_LDR,//load register
-    OP_STR, //store register
-    OP_RTI, //we wont be using this instruction in our implementation
-    OP_NOT, //bitwise not operation
-    OP_LDI, //load indirect
-    OP_STI, //store indirect
-    OP_JMP, //jump
-    OP_RES, //we wont be using this instruction in our implementation
-    OP_LEA, //load effective address
-    OP_TRAP //execute trap
-};
-//TRAP ROUTINES
-enum {
-    TRAP_GETC  = 0x20, //for getting the character from the keyboard 
-    TRAP_OUT   = 0x21, //output a character
-    TRAP_PUTS  = 0x22, //output a word string 
-    TRAP_IN    = 0x23, //gets a character from the keyboard and echo it into the terminal
-    TRAP_PUTSP = 0x24, //output a byte string
-    TRAP_HALT  = 0x25  //halt the program 
-};
 
-//condition flags  
-enum {
-    FL_POS = 1<<0, //POSITIVE
-    FL_ZRO = 1<<1, //ZERO
-    FL_NEG = 1<<2  //NEGATIVE
-};
 
-//Special Memory mapped Registers
-enum {
-    MR_KBSR = 0xFE00, //keyboard status
-    MR_KBDR = 0xFE02 //keyboard data
-};
 //function declarations
-
 uint16_t mem_read(uint16_t);
 uint16_t sign_extend(uint16_t,int);
 void mem_write(uint16_t,uint16_t);
@@ -98,51 +36,13 @@ void func_TRAP_PUTS();
 void func_TRAP_IN();
 void func_TRAP_PUTSP();
 void func_TRAP_HALT(int*);
-
-//Reading our executable file 
-
 uint16_t swap16(uint16_t);
 void read_image_file(FILE*);
 int read_image(const char*);
-
-
-
-//THESE FUNCTIONS ARE THERE FOR TO ACCESS THE KEYBOARD AND STUFF. I HAVENT IMPLEMENTED THE FUNCTIONS BELOW
-//INPUT BUFFERING FUNCTIONS 
-struct termios original_tio;
-
-void disable_input_buffering()
-{
-    tcgetattr(STDIN_FILENO, &original_tio);
-    struct termios new_tio = original_tio;
-    new_tio.c_lflag &= ~ICANON & ~ECHO;
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
-}
-
-void restore_input_buffering()
-{
-    tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
-}
-
-uint16_t check_key()
-{
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    FD_SET(STDIN_FILENO, &readfds);
-
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
-    return select(1, &readfds, NULL, NULL, &timeout) != 0;
-}
-
+void handle_interrupt(int);
 //handle interrupt 
-void handle_interrupt(int signal)
-{
-    restore_input_buffering();
-    printf("\n");
-    exit(-2);
-}
+
+
 int main(int argc, char const *argv[])
 {   
     //basic error handling 111 of arguements is happening there
@@ -163,7 +63,6 @@ int main(int argc, char const *argv[])
     signal(SIGINT, handle_interrupt);
     disable_input_buffering();
 
-    //here some setup stuff gonna happen which we will figure out later on 
 
     reg[R_COND] = FL_ZRO; //initially load the conditional flag register with the zero flag
 
@@ -396,7 +295,7 @@ void func_LDR(const uint16_t* instr) {
 
 void func_LEA(const uint16_t* instr) {
     uint16_t r0 = (*instr >> 9) & 0x7;
-    uint16_t pc_offset = sign_extend(*instr&0x1FF,9);
+    uint16_t pc_offset = sign_extend(*instr & 0x1FF,9);
     reg[r0] = reg[R_PC] + pc_offset;
     update_flags(r0);
 }
@@ -502,4 +401,10 @@ int read_image(const char* image_path) {
     read_image_file(file);
     fclose(file);
     return 1;
+}
+void handle_interrupt(int signal)
+{
+    restore_input_buffering();
+    printf("\n");
+    exit(-2);
 }
