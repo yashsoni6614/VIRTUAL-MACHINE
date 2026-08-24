@@ -54,7 +54,7 @@ LC-3 is a simplified 16-bit computer architecture designed for teaching how CPUs
 Clone the repository, or download it as a ZIP from GitHub and extract it:
 
 ```
-git clone https://github.com/<yashsoni6614>/rurvm.git
+git clone https://github.com/yashsoni6614/rurvm.git
 cd rurvm
 ```
 
