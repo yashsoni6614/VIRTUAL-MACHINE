@@ -213,7 +213,7 @@ void func_ADD(const uint16_t* instr) {
     update_flags(r0);
 }
 
-void func_LDI(const u_int16_t* instr) {
+void func_LDI(const uint16_t* instr) {
 
     uint16_t r0 = (*instr >> 9) & 0x7; //DR
     uint16_t pc_offset = sign_extend(*instr & 0xFF,9); //our PC reg offset
@@ -251,7 +251,7 @@ void func_NOT(const uint16_t* instr) {
 }
 
 //basically a branching function mostly used while looping
-void func_BR(const u_int16_t* instr) {
+void func_BR(const uint16_t* instr) {
     uint16_t pc_offset = sign_extend(*instr & 0x1FF,9);
     uint16_t cond_flag = (*instr >> 9) & 0x7;
     if(cond_flag & reg[R_COND]) {
