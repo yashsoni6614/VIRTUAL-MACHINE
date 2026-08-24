@@ -1,0 +1,7 @@
+these are the demonstrated asm file which are compiled with the help of an LC-3 assembler 
+whose git repo link has been provided in the rurvm REPO's readme 
+
+those who wants to write their own asm files are advised to compile it with the LC-3 assembler 
+that has been specified 
+
+feel free to experiment and write ur own asm code and run it into rurvm
