@@ -101,4 +101,4 @@ This repository does not include an assembler. If you want to write your own LC-
 
 ## Acknowledgements
 
-The reference used while building this emulator was Justin Meiners and Ryan Pendleton's [LC-3 VM tutorial](https://github.com/justinmeiners/lc3-vm), a well-known walkthrough of building an LC-3 VM in C. I followed its structure while implementing this project, wrote and debugged the code myself, and later restructured it into the multi-file, cross-platform layout in this repository. I'm noting this openly rather than presenting the project as designed from a blank page.
+The reference used while building this emulator was Justin Meiners and Ryan Pendleton's [LC-3 VM tutorial](https://github.com/justinmeiners/lc3-vm). I followed its structure while implementing this project, wrote and debugged the code myself, and later restructured it into the multi-file, cross-platform layout in this repository. I'm noting this openly rather than presenting the project as designed from a blank page.
